@@ -597,15 +597,19 @@ def extract_pdf_text(uploaded_file) -> tuple[str, str]:
 
 def get_api_key() -> str:
     key = ""
+
     try:
         key = st.secrets.get("GEMINI_API_KEY", "")
     except Exception:
-        key = ""
+        pass
+
     if not key:
         key = os.environ.get("GEMINI_API_KEY", "")
+
     if not key:
         key = st.session_state.get("manual_api_key", "")
-    return key
+
+    return str(key).strip()
 
 
 def get_model_name() -> str:
@@ -880,26 +884,20 @@ def render_sidebar() -> str:
         st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown("**AI Configuration**")
 
+        st.text_input(
+            "Gemini API Key",
+            type="password",
+            key="manual_api_key",
+            placeholder="Enter your Gemini API key",
+            help="Your API key is stored only for this session."
+        )
+        
         has_key = bool(get_api_key())
+        
         if has_key:
             st.success("Gemini API key detected", icon="✅")
         else:
-            st.warning("No API key found", icon="⚠️")
-            st.text_input(
-                "Enter Gemini API Key",
-                type="password",
-                key="manual_api_key",
-                help="Get a free key from Google AI Studio. Stored only for this session.",
-            )
-
-        with st.expander("Advanced: Model settings"):
-            st.text_input(
-                "Gemini model name",
-                key="manual_model_name",
-                placeholder=DEFAULT_GEMINI_MODEL,
-                help="Override the Gemini model used for AI calls.",
-            )
-
+            st.warning("Please enter your Gemini API key.")
         st.markdown("<hr>", unsafe_allow_html=True)
         st.caption("AI outputs are decision-support suggestions only. Final HR decisions remain with the human recruiter.")
 
