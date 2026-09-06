@@ -102,8 +102,25 @@ def inject_css() -> None:
         header[data-testid="stHeader"] {
             background-color: transparent;
         }
+        /* Hide Streamlit toolbar but keep sidebar toggle available */
         div[data-testid="stToolbar"] {
-            visibility: hidden;
+            visibility: hidden !important;
+        }
+        
+        /* Keep sidebar collapse/expand controls visible */
+        button[data-testid="stSidebarCollapseButton"],
+        button[data-testid="stSidebarCollapsedControl"] {
+            visibility: visible !important;
+            display: flex !important;
+            opacity: 1 !important;
+            z-index: 999999 !important;
+        }
+        
+        /* Keep the top header available for the sidebar control */
+        header[data-testid="stHeader"] {
+            visibility: visible !important;
+            display: flex !important;
+            opacity: 1 !important;
         }
 
         /* Sidebar */
