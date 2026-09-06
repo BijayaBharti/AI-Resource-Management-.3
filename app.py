@@ -108,10 +108,7 @@ def inject_css() -> None:
             z-index: 999999 !important;
         }
         
-        /* Hide only the toolbar buttons, NOT the header */
-        div[data-testid="stToolbar"] {
-            display: none !important;
-        }
+    
         
         /* Sidebar open/close button */
         button[data-testid="stSidebarCollapseButton"] {
