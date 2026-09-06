@@ -96,12 +96,7 @@ def inject_css() -> None:
             color: var(--text-dark) !important;
         }
 
-        #MainMenu, footer {visibility: hidden;}
-        /* Keep header visible so the sidebar collapse/reopen arrow still works;
-           just hide the Streamlit toolbar buttons inside it (deploy/settings icons). */
-        header[data-testid="stHeader"] {
-            background-color: transparent;
-        }
+        
         /* ===== STREAMLIT SIDEBAR TOGGLE FIX ===== */
 
         /* Keep the Streamlit header alive */
@@ -138,13 +133,7 @@ def inject_css() -> None:
             z-index: 9999999 !important;
         }
         
-        /* Make sure the collapsed-sidebar control itself isn't hidden */
-        [data-testid="stSidebarCollapsedControl"] {
-            display: flex !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            z-index: 9999999 !important;
-        }
+    
 
         /* Sidebar */
         section[data-testid="stSidebar"] {
