@@ -102,25 +102,48 @@ def inject_css() -> None:
         header[data-testid="stHeader"] {
             background-color: transparent;
         }
-        /* Hide Streamlit toolbar but keep sidebar toggle available */
-        div[data-testid="stToolbar"] {
-            visibility: hidden !important;
-        }
-        
-        /* Keep sidebar collapse/expand controls visible */
-        button[data-testid="stSidebarCollapseButton"],
-        button[data-testid="stSidebarCollapsedControl"] {
-            visibility: visible !important;
+        /* ===== STREAMLIT SIDEBAR TOGGLE FIX ===== */
+
+        /* Keep the Streamlit header alive */
+        header[data-testid="stHeader"] {
             display: flex !important;
+            visibility: visible !important;
             opacity: 1 !important;
+            height: 3rem !important;
             z-index: 999999 !important;
         }
         
-        /* Keep the top header available for the sidebar control */
-        header[data-testid="stHeader"] {
-            visibility: visible !important;
+        /* Hide only the toolbar buttons, NOT the header */
+        div[data-testid="stToolbar"] {
+            display: none !important;
+        }
+        
+        /* Sidebar open/close button */
+        button[data-testid="stSidebarCollapseButton"] {
             display: flex !important;
+            visibility: visible !important;
             opacity: 1 !important;
+            position: relative !important;
+            z-index: 9999999 !important;
+        }
+        
+        /* Sidebar reopen button when sidebar is collapsed */
+        button[data-testid="stSidebarCollapsedControl"] {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: fixed !important;
+            top: 0.75rem !important;
+            left: 0.75rem !important;
+            z-index: 9999999 !important;
+        }
+        
+        /* Make sure the collapsed-sidebar control itself isn't hidden */
+        [data-testid="stSidebarCollapsedControl"] {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 9999999 !important;
         }
 
         /* Sidebar */
