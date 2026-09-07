@@ -1322,7 +1322,7 @@ def page_best_fit_role() -> None:
     unsafe_allow_html=True,
     )
     
-    ```
+    
     st.markdown(
         '<p class="page-subtext">'
         'AI-powered recommendation for HR decision support — '
@@ -1919,7 +1919,7 @@ def page_best_fit_role() -> None:
             use_container_width=True,
             hide_index=True,
         )
-    ```
+    
 
 # ----------------------------------------------------------------------------
 # PAGE: INTERVIEW QUESTIONS
