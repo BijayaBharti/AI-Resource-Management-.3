@@ -1317,278 +1317,389 @@ def page_resume_analyzer() -> None:
 # PAGE: BEST-FIT ROLE
 # ----------------------------------------------------------------------------
 def page_best_fit_role() -> None:
-    st.markdown(
-        '<p class="page-header">AI Career Fit Analysis</p>',
-        unsafe_allow_html=True,
-    )
+st.markdown(
+'<p class="page-header">AI Career Fit Analysis</p>',
+unsafe_allow_html=True,
+)
 
-    st.markdown(
-        '<p class="page-subtext">'
-        'AI-powered recommendation for HR decision support — '
-        'the final hiring decision remains with you.'
-        '</p>',
-        unsafe_allow_html=True,
-    )
+```
+st.markdown(
+    '<p class="page-subtext">'
+    'AI-powered recommendation for HR decision support — '
+    'the final hiring decision remains with you.'
+    '</p>',
+    unsafe_allow_html=True,
+)
 
-    # ---------------------------------------------------------
-    # 1. Check whether a resume has been analyzed
-    # ---------------------------------------------------------
-    if not st.session_state.get("resume_text", "").strip():
-        st.info(
-            "Please upload and analyze a resume first in the Resume Analyzer section."
+if not st.session_state.get("resume_text", "").strip():
+    st.info(
+        "Please upload and analyze a resume first in the Resume Analyzer section."
+    )
+    return
+
+if st.button(
+    "🎯 Find Best-Fit Role / Department",
+    key="btn_best_fit",
+):
+    with st.spinner("AI is evaluating the candidate across roles..."):
+        result, err = call_gemini(
+            prompt_best_fit_roles(
+                st.session_state.resume_text,
+                st.session_state.get(
+                    "selected_target_role",
+                    JOB_ROLES[0],
+                ),
+            ),
+            expect_json=True,
+        )
+
+    if err:
+        st.error(err)
+        return
+
+    if result is None:
+        st.error(
+            "The AI did not return a response. Please try again."
         )
         return
 
-    # ---------------------------------------------------------
-    # 2. Find Best-Fit Role
-    # ---------------------------------------------------------
-    if st.button(
-        "🎯 Find Best-Fit Role / Department",
-        key="btn_best_fit",
-    ):
-        with st.spinner("AI is evaluating the candidate across roles..."):
+    # Handle AI returning a direct list of roles
+    if isinstance(result, list):
+        result = {
+            "roles": result
+        }
 
-            result, err = call_gemini(
-                prompt_best_fit_roles(
-                    st.session_state.resume_text,
-                    st.session_state.get(
-                        "selected_target_role",
-                        JOB_ROLES[0],
-                    ),
-                ),
-                expect_json=True,
+    # Handle raw fallback
+    if isinstance(result, dict) and "_raw_fallback" in result:
+        st.warning(
+            "The AI response could not be structured automatically."
+        )
+
+        with st.expander("View AI response"):
+            st.text(
+                str(
+                    result.get(
+                        "_raw_fallback",
+                        "",
+                    )
+                )
             )
 
-        # Gemini/API error
-        if err:
-            st.error(err)
-            return
-
-        # No response
-        if result is None:
-            st.error(
-                "The AI did not return a response. "
-                "Please try again."
-            )
-            return
-
-        # Raw/unstructured response
-        if isinstance(result, dict) and "_raw_fallback" in result:
-            st.warning(
-                "Could not parse the AI response into structured data."
-            )
-
-            with st.expander("View AI response"):
-                st.text(str(result.get("_raw_fallback", "")))
-
-            return
-
-        # Save only valid result
-        st.session_state.best_fit_analysis = result
-
-    # ---------------------------------------------------------
-    # 3. Load saved analysis
-    # ---------------------------------------------------------
-    result = st.session_state.get("best_fit_analysis")
-
-    if result is None:
         return
 
-    # ---------------------------------------------------------
-    # 4. Make sure result is a dictionary
-    # ---------------------------------------------------------
     if not isinstance(result, dict):
         st.error(
             "The AI returned an unexpected response format. "
-            "Please run the Best-Fit Role analysis again."
-        )
-
-        with st.expander("View AI response"):
-            st.write(result)
-
-        return
-
-    # ---------------------------------------------------------
-    # 5. Handle raw fallback response
-    # ---------------------------------------------------------
-    if "_raw_fallback" in result:
-        st.warning(
-            "Could not parse the AI response into structured data."
-        )
-
-        with st.expander("View AI response"):
-            st.text(str(result.get("_raw_fallback", "")))
-
-        return
-
-    # ---------------------------------------------------------
-    # 6. Safely extract roles
-    # ---------------------------------------------------------
-    raw_roles = result.get("roles", [])
-
-    if raw_roles is None:
-        raw_roles = []
-
-    # If AI accidentally returned a dictionary instead of a list,
-    # try to convert it into a one-item list.
-    if isinstance(raw_roles, dict):
-        raw_roles = [raw_roles]
-
-    # If AI returned anything other than a list, stop safely.
-    if not isinstance(raw_roles, list):
-        st.error(
-            "The AI returned an invalid role list. "
             "Please try the analysis again."
         )
-
-        with st.expander("View AI response"):
-            st.write(result)
-
         return
 
-    # ---------------------------------------------------------
-    # 7. Keep only valid role dictionaries
-    # ---------------------------------------------------------
-    roles = []
+    st.session_state.best_fit_analysis = result
 
-    for role in raw_roles:
-        if isinstance(role, dict):
-            roles.append(role)
+result = st.session_state.get("best_fit_analysis")
 
-    # ---------------------------------------------------------
-    # 8. Safe match-score conversion
-    # ---------------------------------------------------------
-    def safe_match_score(role: dict) -> float:
-        value = role.get("match_score", 0)
+if result is None:
+    return
 
-        try:
-            if isinstance(value, str):
-                value = value.replace("%", "").strip()
+# ---------------------------------------------------------
+# Convert direct role-list response if necessary
+# ---------------------------------------------------------
+if isinstance(result, list):
+    result = {
+        "roles": result
+    }
 
-            return float(value)
+if not isinstance(result, dict):
+    st.error(
+        "The AI returned an unexpected response format."
+    )
+    return
 
-        except (TypeError, ValueError):
-            return 0.0
-
-    # ---------------------------------------------------------
-    # 9. Sort roles by match score
-    # ---------------------------------------------------------
-    roles = sorted(
-        roles,
-        key=safe_match_score,
-        reverse=True,
+if "_raw_fallback" in result:
+    st.warning(
+        "The AI response could not be structured automatically."
     )
 
-    # ---------------------------------------------------------
-    # 10. No valid roles
-    # ---------------------------------------------------------
-    if not roles:
-        st.warning(
-            "No valid role matches were returned by the AI. "
-            "Please try the analysis again."
+    with st.expander("View AI response"):
+        st.text(
+            str(
+                result.get(
+                    "_raw_fallback",
+                    "",
+                )
+            )
         )
 
-        with st.expander("View AI response"):
-            st.write(result)
+    return
 
-        return
+# ---------------------------------------------------------
+# Extract roles
+# ---------------------------------------------------------
+raw_roles = result.get("roles", [])
 
-    # ---------------------------------------------------------
-    # 11. Selected target role
-    # ---------------------------------------------------------
-    selected_role = st.session_state.get(
-        "selected_target_role",
-        "Selected Role",
+if isinstance(raw_roles, dict):
+    raw_roles = [raw_roles]
+
+if not isinstance(raw_roles, list):
+    st.error(
+        "The AI returned an invalid role list."
     )
+    return
 
-    # ---------------------------------------------------------
-    # 12. Recommended Role
-    # ---------------------------------------------------------
-    recommended_role = result.get(
-        "recommended_role",
-        "",
+roles = []
+
+for item in raw_roles:
+    if isinstance(item, dict):
+        roles.append(item)
+
+if not roles:
+    st.warning(
+        "No suitable roles were returned by the AI. "
+        "Please try the analysis again."
     )
+    return
 
-    if not recommended_role:
-        recommended_role = roles[0].get(
-            "role",
-            "N/A",
-        )
-
-    recommended_score = result.get(
-        "recommended_role_score",
-        safe_match_score(roles[0]),
-    )
+# ---------------------------------------------------------
+# Safe score function
+# ---------------------------------------------------------
+def get_score(role):
+    value = role.get("match_score", 0)
 
     try:
-        if isinstance(recommended_score, str):
-            recommended_score = recommended_score.replace(
-                "%",
-                "",
-            ).strip()
+        if isinstance(value, str):
+            value = value.replace("%", "").strip()
 
-        recommended_score = float(
-            recommended_score
-        )
+        return float(value)
 
     except (TypeError, ValueError):
-        recommended_score = safe_match_score(roles[0])
+        return 0.0
 
-    recommended_explanation = result.get(
-        "recommended_role_explanation",
-        "",
-    )
+roles = sorted(
+    roles,
+    key=get_score,
+    reverse=True,
+)
 
-    if not isinstance(
-        recommended_explanation,
-        str,
-    ):
-        recommended_explanation = str(
-            recommended_explanation
-        )
+# ---------------------------------------------------------
+# Candidate summary
+# ---------------------------------------------------------
+candidate_name = result.get(
+    "candidate_name",
+    "Candidate",
+)
 
-    # ---------------------------------------------------------
-    # 13. Display Recommended Role
-    # ---------------------------------------------------------
-    st.markdown(
-        "<hr class='section-divider'>",
-        unsafe_allow_html=True,
-    )
+candidate_summary = result.get(
+    "candidate_summary",
+    "",
+)
 
-    st.markdown(
-        "##### 🏆 Recommended Role"
-    )
+if not isinstance(candidate_summary, str):
+    candidate_summary = str(candidate_summary)
 
+st.markdown(
+    "<hr class='section-divider'>",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    "### 👤 Candidate Profile"
+)
+
+if candidate_summary:
     st.markdown(
         f"""
-        <div class="hr-card" style="border-left:4px solid #4ade80;">
+        <div class="hr-card">
             <div style="
-                font-size:1.4rem;
+                font-size:1.25rem;
                 font-weight:800;
-                color:var(--accent-light);
+                margin-bottom:8px;
             ">
-                {recommended_role} — {recommended_score:g}% Match
+                {candidate_name}
             </div>
 
-            <p style="
-                margin-top:0.5rem;
+            <div style="
                 color:var(--text-muted);
+                line-height:1.6;
             ">
-                {recommended_explanation}
-            </p>
+                {candidate_summary}
+            </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
-    # ---------------------------------------------------------
-    # 14. Why not original role?
-    # ---------------------------------------------------------
-    why_not_original = result.get(
-        "why_not_original_role",
-        "No explanation provided.",
+else:
+    st.markdown(
+        f"**Candidate:** {candidate_name}"
     )
 
+# ---------------------------------------------------------
+# Recommended Role
+# ---------------------------------------------------------
+recommended_role = result.get(
+    "recommended_role",
+    "",
+)
+
+if not recommended_role:
+    recommended_role = roles[0].get(
+        "role",
+        "Recommended Role",
+    )
+
+recommended_score = result.get(
+    "recommended_role_score",
+    get_score(roles[0]),
+)
+
+try:
+    if isinstance(recommended_score, str):
+        recommended_score = recommended_score.replace(
+            "%",
+            "",
+        ).strip()
+
+    recommended_score = float(
+        recommended_score
+    )
+
+except (TypeError, ValueError):
+    recommended_score = get_score(roles[0])
+
+recommended_explanation = result.get(
+    "recommended_role_explanation",
+    "",
+)
+
+if not isinstance(
+    recommended_explanation,
+    str,
+):
+    recommended_explanation = str(
+        recommended_explanation
+    )
+
+st.markdown(
+    "### 🏆 Recommended Role"
+)
+
+st.markdown(
+    f"""
+    <div class="hr-card" style="
+        border-left:5px solid #4ade80;
+        padding:22px;
+    ">
+        <div style="
+            font-size:1.55rem;
+            font-weight:800;
+            margin-bottom:6px;
+        ">
+            {recommended_role}
+        </div>
+
+        <div style="
+            font-size:1.15rem;
+            font-weight:700;
+            margin-bottom:12px;
+        ">
+            {recommended_score:g}% Match
+        </div>
+
+        <div style="
+            color:var(--text-muted);
+            line-height:1.7;
+        ">
+            {recommended_explanation}
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ---------------------------------------------------------
+# Key Strengths
+# ---------------------------------------------------------
+strengths = result.get(
+    "key_strengths",
+    [],
+)
+
+if isinstance(strengths, str):
+    strengths = [strengths]
+
+if not isinstance(strengths, list):
+    strengths = []
+
+if strengths:
+    st.markdown(
+        "### 💪 Key Strengths"
+    )
+
+    cols = st.columns(
+        min(len(strengths), 3)
+    )
+
+    for index, strength in enumerate(strengths[:3]):
+        with cols[index]:
+            st.markdown(
+                f"""
+                <div class="hr-card" style="
+                    min-height:100px;
+                ">
+                    <div style="
+                        font-size:1.5rem;
+                        margin-bottom:6px;
+                    ">
+                        ✓
+                    </div>
+
+                    <div style="
+                        line-height:1.5;
+                    ">
+                        {strength}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+# ---------------------------------------------------------
+# Development Areas
+# ---------------------------------------------------------
+development = result.get(
+    "development_areas",
+    [],
+)
+
+if isinstance(development, str):
+    development = [development]
+
+if not isinstance(development, list):
+    development = []
+
+if development:
+    st.markdown(
+        "### 📈 Development Areas"
+    )
+
+    for item in development[:4]:
+        st.markdown(
+            f"- {item}"
+        )
+
+# ---------------------------------------------------------
+# Why not original role
+# ---------------------------------------------------------
+selected_role = st.session_state.get(
+    "selected_target_role",
+    "Selected Role",
+)
+
+why_not_original = result.get(
+    "why_not_original_role",
+    "",
+)
+
+if why_not_original:
     if not isinstance(
         why_not_original,
         str,
@@ -1598,215 +1709,217 @@ def page_best_fit_role() -> None:
         )
 
     with st.expander(
-        f"Why not the originally selected role: {selected_role}?"
+        f"💡 Why not / Why this originally selected role: {selected_role}"
     ):
-        st.write(why_not_original)
-
-    # ---------------------------------------------------------
-    # 15. Ranked Role Matches
-    # ---------------------------------------------------------
-    st.markdown(
-        "##### Ranked Role Matches"
-    )
-
-    medals = [
-        "🥇",
-        "🥈",
-        "🥉",
-    ]
-
-    for idx, role in enumerate(roles):
-
-        medal = (
-            medals[idx]
-            if idx < len(medals)
-            else f"{idx + 1}."
+        st.write(
+            why_not_original
         )
 
-        rank_class = (
-            f"rank-{idx + 1}"
-            if idx < 3
-            else ""
-        )
+# ---------------------------------------------------------
+# Role Compatibility
+# ---------------------------------------------------------
+st.markdown(
+    "### 📊 Role Compatibility"
+)
 
-        role_name = role.get(
+for index, role in enumerate(roles):
+    role_name = str(
+        role.get(
             "role",
             "Unknown Role",
         )
-
-        if not isinstance(
-            role_name,
-            str,
-        ):
-            role_name = str(role_name)
-
-        match_score = safe_match_score(
-            role
-        )
-
-        matching_skills = role.get(
-            "matching_skills",
-            [],
-        )
-
-        if isinstance(
-            matching_skills,
-            str,
-        ):
-            matching_skills = [
-                matching_skills
-            ]
-
-        if not isinstance(
-            matching_skills,
-            list,
-        ):
-            matching_skills = []
-
-        matching_skills = [
-            str(skill)
-            for skill in matching_skills
-        ]
-
-        missing_skills = role.get(
-            "missing_skills",
-            [],
-        )
-
-        if isinstance(
-            missing_skills,
-            str,
-        ):
-            missing_skills = [
-                missing_skills
-            ]
-
-        if not isinstance(
-            missing_skills,
-            list,
-        ):
-            missing_skills = []
-
-        missing_skills = [
-            str(skill)
-            for skill in missing_skills
-        ]
-
-        explanation = role.get(
-            "explanation",
-            "",
-        )
-
-        if not isinstance(
-            explanation,
-            str,
-        ):
-            explanation = str(
-                explanation
-            )
-
-        # -----------------------------------------------------
-        # Role Card
-        # -----------------------------------------------------
-        st.markdown(
-            f"<div class='hr-card {rank_class}'>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            f"**{medal} {role_name} — {match_score:g}%**"
-        )
-
-        # Safe score bar
-        try:
-            score_bar(
-                "Match Score",
-                match_score,
-            )
-        except Exception:
-            st.progress(
-                min(
-                    max(
-                        int(match_score),
-                        0,
-                    ),
-                    100,
-                ) / 100
-            )
-
-        rc1, rc2 = st.columns(2)
-
-        with rc1:
-            st.markdown(
-                "*Matching skills:* "
-                + (
-                    ", ".join(
-                        matching_skills
-                    )
-                    if matching_skills
-                    else "—"
-                )
-            )
-
-        with rc2:
-            st.markdown(
-                "*Missing skills:* "
-                + (
-                    ", ".join(
-                        missing_skills
-                    )
-                    if missing_skills
-                    else "—"
-                )
-            )
-
-        if explanation:
-            st.markdown(
-                f"_{explanation}_"
-            )
-
-        st.markdown(
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-    # ---------------------------------------------------------
-    # 16. Summary Table
-    # ---------------------------------------------------------
-    st.markdown(
-        "##### Summary Table"
     )
 
-    table_data = []
+    department = str(
+        role.get(
+            "department",
+            "",
+        )
+    )
 
-    for role in roles:
-        table_data.append(
-            {
-                "Role / Department": str(
-                    role.get(
-                        "role",
-                        "Unknown",
-                    )
-                ),
-                "Match %": round(
-                    safe_match_score(role),
-                    1,
-                ),
-            }
+    score = get_score(role)
+
+    fit_level = role.get(
+        "fit_level",
+        "",
+    )
+
+    if not fit_level:
+        if score >= 90:
+            fit_level = "Excellent Fit"
+        elif score >= 80:
+            fit_level = "Very Good Fit"
+        elif score >= 70:
+            fit_level = "Good Fit"
+        elif score >= 60:
+            fit_level = "Moderate Fit"
+        else:
+            fit_level = "Low Fit"
+
+    matching = role.get(
+        "matching_skills",
+        [],
+    )
+
+    if isinstance(matching, str):
+        matching = [matching]
+
+    if not isinstance(matching, list):
+        matching = []
+
+    missing = role.get(
+        "missing_skills",
+        [],
+    )
+
+    if isinstance(missing, str):
+        missing = [missing]
+
+    if not isinstance(missing, list):
+        missing = []
+
+    explanation = role.get(
+        "explanation",
+        "",
+    )
+
+    if not isinstance(
+        explanation,
+        str,
+    ):
+        explanation = str(explanation)
+
+    if index == 0:
+        rank = "🥇"
+    elif index == 1:
+        rank = "🥈"
+    elif index == 2:
+        rank = "🥉"
+    else:
+        rank = f"{index + 1}."
+
+    st.markdown(
+        f"""
+        <div class="hr-card" style="
+            margin-bottom:15px;
+            padding:20px;
+        ">
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:15px;
+            ">
+                <div>
+                    <div style="
+                        font-size:1.15rem;
+                        font-weight:800;
+                    ">
+                        {rank} {role_name}
+                    </div>
+
+                    <div style="
+                        color:var(--text-muted);
+                        margin-top:4px;
+                    ">
+                        {department}
+                    </div>
+                </div>
+
+                <div style="
+                    font-size:1.25rem;
+                    font-weight:800;
+                ">
+                    {score:g}%
+                </div>
+            </div>
+
+            <div style="
+                margin-top:12px;
+                font-weight:700;
+            ">
+                {fit_level}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if matching:
+        st.markdown(
+            "**✅ Matching Skills:** "
+            + ", ".join(
+                str(x)
+                for x in matching
+            )
         )
 
-    if table_data:
-        table_df = pd.DataFrame(
-            table_data
+    if missing:
+        st.markdown(
+            "**📚 Skills to Develop:** "
+            + ", ".join(
+                str(x)
+                for x in missing
+            )
         )
 
-        st.dataframe(
-            table_df,
-            use_container_width=True,
-            hide_index=True,
+    if explanation:
+        st.markdown(
+            f"**Why this fit?** {explanation}"
         )
 
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
 
+# ---------------------------------------------------------
+# Summary Table
+# ---------------------------------------------------------
+st.markdown(
+    "### 📋 Quick Comparison"
+)
+
+table_data = []
+
+for role in roles:
+    score = get_score(role)
+
+    table_data.append(
+        {
+            "Role": str(
+                role.get(
+                    "role",
+                    "Unknown",
+                )
+            ),
+            "Department": str(
+                role.get(
+                    "department",
+                    "—",
+                )
+            ),
+            "Match": f"{score:g}%",
+            "Fit": str(
+                role.get(
+                    "fit_level",
+                    "—",
+                )
+            ),
+        }
+    )
+
+if table_data:
+    table_df = pd.DataFrame(
+        table_data
+    )
+
+    st.dataframe(
+        table_df,
+        use_container_width=True,
+        hide_index=True,
+    )
+```
 
 # ----------------------------------------------------------------------------
 # PAGE: INTERVIEW QUESTIONS
