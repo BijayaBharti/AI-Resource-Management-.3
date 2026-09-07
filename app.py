@@ -741,134 +741,139 @@ If some information is missing from the resume, use an empty list or "Not specif
 
 
 def prompt_best_fit_roles(resume_text: str, originally_selected_role: str) -> str:
-    return f"""
+resume = resume_text[:12000]
+
+```
+return f"""
+```
+
 You are an AI-powered HR Career Fit Analyst.
 
-Your job is to analyze the candidate's resume and provide a CLEAR, HUMAN-READABLE
+Your job is to analyze the candidate resume and provide a clear, professional
 career-fit recommendation for an HR professional.
 
-IMPORTANT:
-
-* This is decision SUPPORT only, not an automatic hiring decision.
-* Base every recommendation ONLY on information present in the resume.
-* Do not invent experience, qualifications, certifications, or skills.
-* Use simple professional HR language.
-* Do NOT use technical JSON terminology in any explanation.
-* The final result will be displayed directly on an HR dashboard.
+This is decision SUPPORT only, not an automatic hiring decision.
 
 The HR professional originally considered this candidate for:
-"{originally_selected_role}"
+{originally_selected_role}
 
 CANDIDATE RESUME:
-"""{resume_text[:12000]}"""
+{resume}
 
-Analyze the candidate against these and other relevant roles:
+Analyze the candidate for multiple relevant roles, including:
 
 * Data Analyst
 * Business Analyst
 * HR Analytics
-* Finance / Financial Analyst
+* Financial Analyst
 * Marketing Analyst
-* Software Developer / Software Engineer
+* Software Developer
 * Operations
 * Sales
 * Customer Support
 * Product Management
 * Project Management
-* Other suitable roles if clearly supported by the resume
 
-For every role, evaluate:
+You may include another role if the resume strongly supports it.
 
-1. Relevant technical skills
-2. Soft skills
-3. Education
+Evaluate each role using:
+
+1. Education
+2. Technical skills
+3. Soft skills
 4. Projects
 5. Certifications
-6. Work/internship experience
+6. Internship or work experience
 7. Tools and technologies
-8. Overall suitability for the role
+8. Overall suitability
 
-SCORING:
+SCORING SYSTEM:
+90-100 = Excellent Fit
+80-89 = Very Good Fit
+70-79 = Good Fit
+60-69 = Moderate Fit
+Below 60 = Low Fit
 
-* 90-100 = Excellent Fit
-* 80-89 = Very Good Fit
-* 70-79 = Good Fit
-* 60-69 = Moderate Fit
-* Below 60 = Low Fit
+IMPORTANT RULES:
 
-The recommended role MUST be the role with the strongest overall evidence from the resume.
-
-Write explanations as if an HR professional is reading the result.
-Avoid phrases such as "the JSON indicates", "the model predicts", or "according to the algorithm".
+* Base your analysis ONLY on information present in the resume.
+* Do not invent skills, experience, qualifications, projects or certifications.
+* Use simple professional HR language.
+* Explanations must be easy for a human HR professional to understand.
+* Do not make a final hiring decision.
+* The recommended role must be the strongest match based on the resume.
 
 Return ONLY valid JSON.
-Do not return markdown.
-Do not return explanations outside the JSON.
+Do not use markdown.
+Do not add any text before or after the JSON.
 
-Return EXACTLY this structure:
+Use EXACTLY this JSON structure:
 
 {{
-"candidate_name": "Candidate name from resume, or 'Candidate' if unavailable",
+"candidate_name": "Candidate name or Candidate",
 
-"candidate_summary": "2-3 sentence professional summary of the candidate based only on the resume",
+```
+"candidate_summary": "A short 2-3 sentence professional summary of the candidate.",
 
 "recommended_role": "Single best-fit role",
 "recommended_role_score": 0,
 
-"recommended_role_explanation": "3-4 sentence clear explanation of why this role is the strongest fit. Mention the most relevant skills, education, projects, experience, or certifications found in the resume.",
+"recommended_role_explanation": "A clear 3-4 sentence explanation of why this role is the strongest fit.",
 
 "key_strengths": [
-"Most important candidate strength",
-"Second important strength",
-"Third important strength"
+    "Important candidate strength",
+    "Second important strength",
+    "Third important strength"
 ],
 
 "development_areas": [
-"Most important skill or area to improve",
-"Second skill or area to improve",
-"Third skill or area to improve"
+    "Skill or area that can be improved",
+    "Second development area",
+    "Third development area"
 ],
 
-"why_not_original_role": "Clear and balanced explanation of whether the candidate fits the originally selected role. If they fit well, say why. If another role appears stronger, explain why without negatively judging the candidate.",
+"why_not_original_role": "A balanced explanation of how well the candidate fits the originally selected role and whether another role appears to be a stronger fit.",
 
 "roles": [
-{{
-"role": "Role name",
-"department": "Department name",
-"match_score": 0,
-"fit_level": "Excellent Fit / Very Good Fit / Good Fit / Moderate Fit / Low Fit",
-
-```
-  "matching_skills": [
-    "Skill 1",
-    "Skill 2",
-    "Skill 3"
-  ],
-
-  "missing_skills": [
-    "Skill that would improve suitability",
-    "Another useful skill"
-  ],
-
-  "explanation": "2-3 sentence human-readable explanation of why the candidate is or is not suitable for this role."
-}}
-```
-
+    {{
+        "role": "Role name",
+        "department": "Department name",
+        "match_score": 0,
+        "fit_level": "Excellent Fit",
+        "matching_skills": [
+            "Skill 1",
+            "Skill 2",
+            "Skill 3"
+        ],
+        "missing_skills": [
+            "Skill that would improve suitability",
+            "Another useful skill"
+        ],
+        "explanation": "A short 2-3 sentence explanation of the candidate's suitability for this role."
+    }}
 ]
+```
+
 }}
 
-REQUIREMENTS:
+REQUIREMENTS FOR ROLES:
 
-* Include at least 5 roles.
-* Include the originally selected role in the role comparison.
-* Sort roles from highest match_score to lowest match_score.
-* match_score must be an integer between 0 and 100.
-* recommended_role_score must match the score of the recommended role.
-* matching_skills must contain only skills supported by the resume.
+* Include at least 5 different roles.
+* Include the originally selected role.
+* Sort all roles from highest match score to lowest.
+* match_score must be an integer from 0 to 100.
+* recommended_role_score must equal the match_score of the recommended role.
+* matching_skills must contain only skills actually supported by the resume.
 * missing_skills should contain realistic skills that would improve suitability.
-* Keep explanations concise, professional, and easy for an HR professional to understand.
-* Do not make a final hiring decision.
-  """
+* fit_level must be one of:
+  Excellent Fit
+  Very Good Fit
+  Good Fit
+  Moderate Fit
+  Low Fit
+
+Keep the language concise, professional and human-readable.
+"""
 
 
 
