@@ -30,7 +30,7 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hr_assistant
 
 # The Gemini model used for all AI calls. Change here (or via the sidebar)
 # to switch models without touching the rest of the code.
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
 
 JOB_ROLES = [
     "Data Analyst",
