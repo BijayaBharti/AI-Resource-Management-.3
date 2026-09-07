@@ -741,7 +741,7 @@ If some information is missing from the resume, use an empty list or "Not specif
 
 
 def prompt_best_fit_roles(resume_text: str, originally_selected_role: str) -> str:
-return f"""
+    return f"""
 You are an AI-powered HR Career Fit Analyst.
 
 Your job is to analyze the candidate's resume and provide a CLEAR, HUMAN-READABLE
