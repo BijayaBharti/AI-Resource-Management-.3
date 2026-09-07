@@ -1265,7 +1265,19 @@ def page_best_fit_role() -> None:
     if not result or "_raw_fallback" in (result or {}):
         return
 
-    roles = sorted(result.get("roles", []), key=lambda r: r.get("match_score", 0), reverse=True)
+    raw_roles = result.get("roles", [])
+
+    # Make sure every role is a dictionary
+    roles = [
+        r for r in raw_roles
+        if isinstance(r, dict)
+    ]
+    
+    roles = sorted(
+        roles,
+        key=lambda r: float(r.get("match_score", 0) or 0),
+        reverse=True
+    )
 
     st.markdown("<hr class='section-divider'>", unsafe_allow_html=True)
     st.markdown("##### 🏆 Recommended Role")
